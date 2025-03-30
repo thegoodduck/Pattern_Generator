@@ -20,8 +20,8 @@ def generate_pattern_num(difficulty):
                 pattern.append(set)      
         return ''.join(pattern)
     if options == 1:
-        # Generate a sequence of random digits
         sequence = [random.choice("1234567890") for _ in range(difficulty)]
+    
         # Randomly select a rule and a number
         rule = random.choice(["*", "/", "+", "-"])
         rule_num = random.randint(2, 9) if rule in ["*", "/"] else random.randint(1, 9)  # Avoid no-op operations
@@ -46,9 +46,12 @@ def generate_pattern_num(difficulty):
             elif rule == "+":
                 new_value = original_value + rule_num
             elif rule == "-":
-                new_value = max(0, original_value - rule_num)  # Prevent negative numbers
-            
-            sequence[digit_selected] = str(new_value)[-1]  # Keep only the last digit to avoid growing numbers
+                new_value = max(0, original_value - rule_num)  # Ensure no negative numbers
+                if new_value == 0:
+                    new_value = 1  # Prevent zeros and keep updating the sequence
+
+            # Update the selected digit in the sequence
+            sequence[digit_selected] = str(new_value)[-1]  # Ensure it's still a single digit
 
             iteration_output = ''.join(sequence)  # Current iteration result
             full_output += iteration_output  # Append this iteration to full output
