@@ -10,7 +10,7 @@ def generate_pattern(difficulty,char_set):
     return pattern
 
 def generate_pattern_num(difficulty):
-    options = random.randint(0,1)
+    options = random.randint(0,2)
     if options == 0:
         print("Option 0")
         set = (''.join(random.choice("1234567890") for i in range(difficulty)))
@@ -29,7 +29,7 @@ def generate_pattern_num(difficulty):
         # Randomly select a digit index to apply the rule
         digit_selected = random.randint(0, len(sequence) - 1)
         
-        full_output = ""  # Store the full concatenated output
+        full_output = ""  # Initialize full_output to store the full concatenated output
 
         print(f"Option 1")
         print(f"Initial Sequence: {''.join(sequence)}")
@@ -42,18 +42,17 @@ def generate_pattern_num(difficulty):
             if rule == "*":
                 new_value = original_value * rule_num
             elif rule == "/":
-                new_value = original_value // rule_num if rule_num != 0 else original_value  # Avoid division by zero
+                new_value = original_value // rule_num if rule_num != 0 else original_value
             elif rule == "+":
                 new_value = original_value + rule_num
             elif rule == "-":
-                new_value = max(0, original_value - rule_num)  # Ensure no negative numbers
-                if new_value == 0:
-                    new_value = 1  # Prevent zeros and keep updating the sequence
+                # Use modulo arithmetic to wrap around digits 0-9
+                new_value = (original_value - rule_num) % 10
 
-            # Update the selected digit in the sequence
-            sequence[digit_selected] = str(new_value)[-1]  # Ensure it's still a single digit
-
-            iteration_output = ''.join(sequence)  # Current iteration result
+            # Update the selected digit in the sequence (keep only last digit if multi-digit)
+            sequence[digit_selected] = str(new_value)[-1]
+            
+            iteration_output = ''.join(sequence)
             full_output += iteration_output  # Append this iteration to full output
             
             print(f"Iteration {i}: {iteration_output}")  # Print each iteration
@@ -64,4 +63,41 @@ def generate_pattern_num(difficulty):
         print(full_output)
 
         return full_output
+    if options == 2:
+        print("Option 2")
+        rule = random.choice(["*", "/", "+", "-"])
+        rule_num = random.randint(2, 9) if rule in ["*", "/"] else random.randint(1, 9)  # Avoid no-op operations
+        # Generate a string (set) of random letters and convert it to a list so it can be iterated over
+        sequence = list(''.join(random.choice("abcdefghijklmnopqrstuvwxyz") for i in range(difficulty)))
+        # Will generate a pattern like if sequence = "abc" and rule == "+2" it will be abc[modified output]
+        full_output = ""
+        for i in range(1, difficulty + 1):
+            # Apply the rule to every digit (character) in the entire sequence
+            for j in range(len(sequence)):
+                # Here you might want to define how to apply a rule on alphabet characters.
+                # For demonstration, we'll convert 'a' to 0, 'b' to 1, etc.
+                original_value = ord(sequence[j]) - ord('a')
+                
+                if rule == "*":
+                    new_value = original_value * rule_num
+                elif rule == "/":
+                    new_value = original_value // rule_num if rule_num != 0 else original_value
+                elif rule == "+":
+                    new_value = original_value + rule_num
+                elif rule == "-":
+                    new_value = (original_value - rule_num) % 26  # for alphabet wrap around
+                
+                # Map the new value (mod 26) back to a lowercase letter
+                sequence[j] = chr((new_value % 26) + ord('a'))
+            
+            iteration_output = ''.join(sequence)
+            full_output += iteration_output  # Append this iteration to full output
+            print(f"Iteration {i}: {iteration_output}")
+            print(f"Full Output So Far: {full_output}\n")
+        
+        # Print the final full output on a separate line
+        print("Final Full Output:")
+        print(full_output)
+        return full_output
+
 print(generate_pattern_num(5))
