@@ -1,8 +1,9 @@
 import random
 import flask
+app = flask.Flask(__name__)
 pattern = []
 def generate_pattern(difficulty,char_set):
-    set = (''.join(random.choice(char_set) for i in range(difficulty)))
+    char_sequence = ''.join(random.choice(char_set) for _ in range(difficulty))
     for i in range(difficulty):
             # generating pattern(not random) based on the char_set provided by the user.
             # We will use difficulty as the length of each iteration of the pattern. The pattern will be a list of strings.
@@ -68,15 +69,13 @@ def generate_pattern_num(difficulty):
         rule = random.choice(["*", "/", "+", "-"])
         rule_num = random.randint(2, 9) if rule in ["*", "/"] else random.randint(1, 9)  # Avoid no-op operations
         # Generate a string (set) of random letters and convert it to a list so it can be iterated over
-        sequence = list(''.join(random.choice("abcdefghijklmnopqrstuvwxyz") for i in range(difficulty)))
+        sequence = list(''.join(random.choice("1234567890") for i in range(difficulty)))
         # Will generate a pattern like if sequence = "abc" and rule == "+2" it will be abc[modified output]
         full_output = ""
         for i in range(1, difficulty + 1):
-            # Apply the rule to every digit (character) in the entire sequence
+            # Apply the rule to every digit in the sequence
             for j in range(len(sequence)):
-                # Here you might want to define how to apply a rule on alphabet characters.
-                # For demonstration, we'll convert 'a' to 0, 'b' to 1, etc.
-                original_value = ord(sequence[j]) - ord('a')
+                original_value = int(sequence[j])
                 
                 if rule == "*":
                     new_value = original_value * rule_num
@@ -85,10 +84,10 @@ def generate_pattern_num(difficulty):
                 elif rule == "+":
                     new_value = original_value + rule_num
                 elif rule == "-":
-                    new_value = (original_value - rule_num) % 26  # for alphabet wrap around
+                    new_value = (original_value - rule_num) % 10  # wrap around for digits 0-9
                 
-                # Map the new value (mod 26) back to a lowercase letter
-                sequence[j] = chr((new_value % 26) + ord('a'))
+                # Keep only the last digit in case of multi-digit results
+                sequence[j] = str(new_value)[-1]
             
             iteration_output = ''.join(sequence)
             full_output += iteration_output  # Append this iteration to full output
@@ -100,4 +99,16 @@ def generate_pattern_num(difficulty):
         print(full_output)
         return full_output
 
-print(generate_pattern_num(5))
+# Generate pdf with different patterns
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if flask.request.method == 'POST':
+        difficulty = int(flask.request.form['difficulty'])
+        char_set = flask.request.form['char_set']
+        if char_set.isdigit():
+            pattern = generate_pattern_num(difficulty)
+        else:
+            pattern = generate_pattern(difficulty, char_set)
+        return flask.render_template('index.html', pattern=pattern)
+    return flask.render_template('index.html')
+app.run(debug=True)
