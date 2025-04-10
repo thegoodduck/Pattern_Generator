@@ -1,28 +1,32 @@
 import random
 import flask
+import io
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+# Removed unused import
 app = flask.Flask(__name__)
 pattern = []
 def generate_pattern(difficulty,char_set):
     char_sequence = ''.join(random.choice(char_set) for _ in range(difficulty))
+    pattern = []
     for i in range(difficulty):
             # generating pattern(not random) based on the char_set provided by the user.
             # We will use difficulty as the length of each iteration of the pattern. The pattern will be a list of strings.
-            pattern.append(set)
+            pattern.append(char_sequence)
     return pattern
 
-def generate_pattern_num(difficulty):
-    options = random.randint(0,2)
+def generate_pattern_num(difficulty, char_set="0123456789"):
+    options = random.randint(0, 2)
     if options == 0:
         print("Option 0")
-        set = (''.join(random.choice("1234567890") for i in range(difficulty)))
+        seq = ''.join(random.choice(char_set) for i in range(difficulty))
+        pattern = []
         for i in range(difficulty):
-                # generating pattern(not random) based on the char_set provided by the user.
-                # We will use difficulty as the length of each iteration of the pattern. The pattern will be a list of strings.
-                pattern.append(set)      
+            # generating pattern (not random) based on the char_set provided by the user.
+            pattern.append(seq)
         return ''.join(pattern)
     if options == 1:
-        sequence = [random.choice("1234567890") for _ in range(difficulty)]
-    
+        sequence = [random.choice(char_set) for _ in range(difficulty)]
         # Randomly select a rule and a number
         rule = random.choice(["*", "/", "+", "-"])
         rule_num = random.randint(2, 9) if rule in ["*", "/"] else random.randint(1, 9)  # Avoid no-op operations
@@ -47,19 +51,17 @@ def generate_pattern_num(difficulty):
             elif rule == "+":
                 new_value = original_value + rule_num
             elif rule == "-":
-                # Use modulo arithmetic to wrap around digits 0-9
                 new_value = (original_value - rule_num) % 10
 
             # Update the selected digit in the sequence (keep only last digit if multi-digit)
             sequence[digit_selected] = str(new_value)[-1]
             
             iteration_output = ''.join(sequence)
-            full_output += iteration_output  # Append this iteration to full output
+            full_output += iteration_output
             
-            print(f"Iteration {i}: {iteration_output}")  # Print each iteration
-            print(f"Full Output So Far: {full_output}\n")  # Print full merged output
+            print(f"Iteration {i}: {iteration_output}")
+            print(f"Full Output So Far: {full_output}\n")
 
-        # Print the final full output on a separate line
         print("Final Full Output:")
         print(full_output)
 
@@ -68,9 +70,7 @@ def generate_pattern_num(difficulty):
         print("Option 2")
         rule = random.choice(["*", "/", "+", "-"])
         rule_num = random.randint(2, 9) if rule in ["*", "/"] else random.randint(1, 9)  # Avoid no-op operations
-        # Generate a string (set) of random letters and convert it to a list so it can be iterated over
-        sequence = list(''.join(random.choice("1234567890") for i in range(difficulty)))
-        # Will generate a pattern like if sequence = "abc" and rule == "+2" it will be abc[modified output]
+        sequence = list(''.join(random.choice(char_set) for i in range(difficulty)))
         full_output = ""
         for i in range(1, difficulty + 1):
             # Apply the rule to every digit in the sequence
@@ -90,11 +90,10 @@ def generate_pattern_num(difficulty):
                 sequence[j] = str(new_value)[-1]
             
             iteration_output = ''.join(sequence)
-            full_output += iteration_output  # Append this iteration to full output
+            full_output += iteration_output
             print(f"Iteration {i}: {iteration_output}")
             print(f"Full Output So Far: {full_output}\n")
         
-        # Print the final full output on a separate line
         print("Final Full Output:")
         print(full_output)
         return full_output
@@ -103,12 +102,122 @@ def generate_pattern_num(difficulty):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if flask.request.method == 'POST':
-        difficulty = int(flask.request.form['difficulty'])
-        char_set = flask.request.form['char_set']
-        if char_set.isdigit():
-            pattern = generate_pattern_num(difficulty)
+        # Check for batch generation: if multiple difficulties and char_sets are provided,
+        # assume form fields "difficulty" and "char_set" are lists.
+        if flask.request.form.getlist('difficulty') and len(flask.request.form.getlist('difficulty')) > 1:
+            difficulties = flask.request.form.getlist('difficulty')
+            char_sets = flask.request.form.getlist('char_set')
+            pattern_list = []
+            # Process each difficulty and char_set pair
+            for diff, cs in zip(difficulties, char_sets):
+                diff_int = int(diff)
+                if cs.isdigit():
+                    p = generate_pattern_num(diff_int, cs)
+                else:
+                    p = generate_pattern(diff_int, cs)
+                # Ensure a one-liner: join list elements without separators
+                if isinstance(p, list):
+                    p = "".join(p)
+                pattern_list.append(p)
+            # One pattern per line
+            final_pattern_lines = pattern_list
         else:
-            pattern = generate_pattern(difficulty, char_set)
-        return flask.render_template('index.html', pattern=pattern)
+            difficulty = int(flask.request.form['difficulty'])
+            char_set = flask.request.form['char_set']
+            if char_set.isdigit():
+                pattern = generate_pattern_num(difficulty, char_set)
+            else:
+                pattern = generate_pattern(difficulty, char_set)
+            if isinstance(pattern, list):
+                pattern = "".join(pattern)
+            final_pattern_lines = [pattern]
+
+        # Generate PDF with custom styling
+        pdf_buffer = io.BytesIO()
+        c = canvas.Canvas(pdf_buffer, pagesize=letter)
+        width, height = letter
+
+        # Title, Link and Signature Settings
+        title = "Pattern Generator"
+        link_text = "https://github.com/thegoodduck/Pattern_Generator"
+        signature = "Made with love by @thegoodduck"
+
+        # Draw Title at top center (fixed position)
+        c.setFont("Helvetica-Bold", 24)
+        c.setFillColorRGB(0, 0, 0)
+        c.drawCentredString(width / 2, height - 50, title)
+
+        # Rainbow color palette (as RGB tuples normalized between 0 and 1)
+        rainbow_colors = [
+            (1, 0, 0),       # Red
+            (1, 0.5, 0),     # Orange
+            (1, 1, 0),       # Yellow
+            (0, 1, 0),       # Green
+            (0, 0, 1),       # Blue
+            (0.29, 0, 0.51), # Indigo
+            (0.93, 0.51, 0.93)  # Violet
+        ]
+
+        # Draw each pattern string at a separate random non-overlapping position
+        c.setFont("Helvetica", 14)
+        line_height = 20  # approximate height for text
+        margin = 40
+        placed_boxes = []  # To store bounding boxes for drawn texts
+
+        for idx, line in enumerate(final_pattern_lines):
+            text_width = c.stringWidth(line, "Helvetica", 14)
+            color = random.choice(rainbow_colors)
+            placed = False
+            attempts = 0
+
+            # Try up to 100 times to find a non-overlapping random position
+            while not placed and attempts < 100:
+                random_x = random.uniform(margin, width - margin - text_width)
+                random_y = random.uniform(margin, height - margin - line_height)
+                new_box = (random_x, random_y, random_x + text_width, random_y + line_height)
+
+                # Check overlap with all previously placed boxes
+                overlap = any(
+                    not (new_box[2] < box[0] or new_box[0] > box[2] or
+                         new_box[3] < box[1] or new_box[1] > box[3])
+                    for box in placed_boxes
+                )
+
+                if not overlap:
+                    placed_boxes.append(new_box)
+                    c.setFillColorRGB(*color)
+                    c.drawString(random_x, random_y, line)
+                    placed = True
+                attempts += 1
+
+            # Fallback: if unable to fit without overlapping after 100 attempts
+            if not placed:
+                fallback_y = height - margin - idx * line_height
+                c.setFillColorRGB(*color)
+                c.drawString(margin, fallback_y, line)
+
+        # Add the clickable link (centered above the signature)
+        c.setFont("Helvetica-Oblique", 12)
+        c.setFillColorRGB(0, 0, 1)  # Blue for the link
+        c.drawCentredString(width / 2, 50, link_text)
+        link_width = 200
+        c.linkURL(link_text,
+              (width / 2 - link_width / 2, 40, width / 2 + link_width / 2, 60),
+              relative=0)
+
+        # Add signature at the bottom-right
+        c.setFillColorRGB(0, 0, 0)
+        c.drawRightString(width - margin, 30, signature)
+
+        c.showPage()
+        c.save()
+        pdf_buffer.seek(0)
+
+        return flask.send_file(
+            pdf_buffer,
+            as_attachment=True,
+            download_name='pattern.pdf',
+            mimetype='application/pdf'
+        )
     return flask.render_template('index.html')
 app.run(debug=True)
