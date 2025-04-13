@@ -3,6 +3,9 @@ import flask
 import io
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase import pdfmetrics
+import requests
 # Removed unused import
 app = flask.Flask(__name__)
 pattern = []
@@ -132,10 +135,19 @@ def index():
                 pattern = "".join(pattern)
             final_pattern_lines = [pattern]
 
-        # Generate PDF with custom styling
+        # Generate PDF with custom styling and support for emojis
         pdf_buffer = io.BytesIO()
         c = canvas.Canvas(pdf_buffer, pagesize=letter)
         width, height = letter
+
+        # Use a preinstalled font with emoji support (assumes DejaVuSans is available)
+        try:
+            fallback_font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+            pdfmetrics.registerFont(TTFont('DejaVuSans', fallback_font_path))
+            c.setFont('DejaVuSans', 14)
+        except Exception as e:
+            print(f"Error registering DejaVuSans font: {e}")
+            c.setFont("Helvetica", 14)
 
         # Title, Link and Signature Settings
         title = "Pattern Generator"
@@ -143,7 +155,7 @@ def index():
         signature = "Made with love by @thegoodduck"
 
         # Draw Title at top center (fixed position)
-        c.setFont("Helvetica-Bold", 24)
+        # c.setFont("Helvetica-Bold", 24)
         c.setFillColorRGB(0, 0, 0)
         c.drawCentredString(width / 2, height - 50, title)
 
