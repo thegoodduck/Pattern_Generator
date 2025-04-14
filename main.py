@@ -6,6 +6,29 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase import pdfmetrics
 import requests
+import os
+import urllib.request
+import zipfile
+FONT_NAME = "Symbola"
+FONT_FILE = "Symbola.ttf"
+FONT_URL = "https://github.com/zhm/symbola/raw/refs/heads/master/fonts/Symbola.ttf"
+ZIP_FILE = "Symbola.zip"
+
+# Download and extract the font if not present
+# Download the font if not already present
+def download_symbola():
+    if not os.path.exists(FONT_FILE):
+        print("[*] Downloading Symbola font...")
+        urllib.request.urlretrieve(FONT_URL, FONT_FILE)
+        print("[+] Font downloaded: Symbola.ttf")
+
+# Register font
+def register_font():
+    if not os.path.exists(FONT_FILE):
+        download_symbola()
+    pdfmetrics.registerFont(TTFont(FONT_NAME, FONT_FILE))
+download_symbola()
+register_font()
 # Removed unused import
 app = flask.Flask(__name__)
 pattern = []
@@ -141,13 +164,6 @@ def index():
         width, height = letter
 
         # Use a preinstalled font with emoji support (assumes DejaVuSans is available)
-        try:
-            fallback_font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-            pdfmetrics.registerFont(TTFont('DejaVuSans', fallback_font_path))
-            c.setFont('DejaVuSans', 14)
-        except Exception as e:
-            print(f"Error registering DejaVuSans font: {e}")
-            c.setFont("Helvetica", 14)
 
         # Title, Link and Signature Settings
         title = "Pattern Generator"
@@ -171,7 +187,7 @@ def index():
         ]
 
         # Draw each pattern string at a separate random non-overlapping position
-        c.setFont("Helvetica", 14)
+        c.setFont("Symbola", 14)
         line_height = 20  # approximate height for text
         margin = 40
         placed_boxes = []  # To store bounding boxes for drawn texts
