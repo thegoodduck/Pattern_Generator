@@ -1,13 +1,36 @@
 import random
 import flask
 import io
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-# Removed unused import
+import os
+import requests
+import urllib.request
+import zipfile
+
+# Set this flag to True to use WeasyPrint (emoji-friendly) or False for ReportLab.
+USE_WEASYPRINT = True
+
+if USE_WEASYPRINT:
+    from weasyprint import HTML
+else:
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.pdfbase import pdfmetrics
+
 app = flask.Flask(__name__)
 
 # --- Pattern Generation Functions ---
 def generate_pattern(difficulty, char_set):
+    """
+    Generate a pattern by repeating a random sequence of characters.
+    
+    Args:
+        difficulty (int): The length of the pattern to generate
+        char_set (str): The set of characters to use for generation
+        
+    Returns:
+        list: A list containing the generated pattern
+    """
     char_sequence = ''.join(random.choice(char_set) for _ in range(difficulty))
     pattern = []
     for i in range(difficulty):
@@ -15,15 +38,29 @@ def generate_pattern(difficulty, char_set):
     return pattern
 
 def generate_pattern_num(difficulty, char_set="0123456789"):
-    options = random.randint(0, 2)
-    if options == 0:
-        print("Option 0")
-        seq = ''.join(random.choice(char_set) for i in range(difficulty))
+    """
+    Generate a numeric pattern using one of three algorithms.
+    
+    Args:
+        difficulty (int): The complexity level of the pattern
+        char_set (str, optional): The set of digits to use. Defaults to "0123456789".
+        
+    Returns:
+        str: The generated numeric pattern
+    """
+    # Select a random algorithm
+    algorithm = random.randint(0, 2)
+    
+    if algorithm == 0:
+        # Algorithm 0: Simple repetition of a random sequence
+        sequence = ''.join(random.choice(char_set) for _ in range(difficulty))
         pattern = []
         for _ in range(difficulty):
             pattern.append(sequence)
         return ''.join(pattern)
-    if options == 1:
+        
+    elif algorithm == 1:
+        # Algorithm 1: Evolving sequence with selective digit modification
         sequence = [random.choice(char_set) for _ in range(difficulty)]
         operation = random.choice(["*", "/", "+", "-"])
         factor = random.randint(2, 9) if operation in ["*", "/"] else random.randint(1, 9)
