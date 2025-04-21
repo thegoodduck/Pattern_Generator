@@ -5,27 +5,108 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Pattern Generator</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .pattern-group {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        .pattern-group:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .header-section {
+            background-color: #f1f8ff;
+            border-bottom: 1px solid #dbe9ff;
+            margin-bottom: 2rem;
+            padding: 2rem 0 1rem 0;
+        }
+        .form-label {
+            font-weight: 500;
+        }
+        .alert {
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <h1 class="mb-4">Pattern Generator</h1>
-        <form method="post" id="pattern-form">
-            <div id="pattern-fields">
-                <div class="pattern-group border rounded p-3 mb-3">
-                    <div class="mb-3">
-                        <label for="difficulty0" class="form-label">Difficulty</label>
-                        <input type="number" class="form-control" id="difficulty0" name="difficulty" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="char_set0" class="form-label">Character Set</label>
-                        <input type="text" class="form-control" id="char_set0" name="char_set" required>
-                    </div>
-                </div>
+    <div class="header-section">
+        <div class="container">
+            <h1 class="display-4 text-center">Pattern Generator</h1>
+            <p class="lead text-center text-muted">Generate custom patterns for testing, education, or creative projects</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Error message display -->
+        {% if error %}
+        <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+            {{ error }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Pattern Configuration</h5>
             </div>
-            <button type="button" class="btn btn-secondary mb-3" id="add-pattern">Add Another Pattern</button>
-            <br>
-            <button type="submit" class="btn btn-primary">Generate Pattern</button>
-        </form>
+            <div class="card-body">
+                <form method="post" id="pattern-form">
+                    <div id="pattern-fields">
+                        <div class="pattern-group border rounded p-4 mb-4">
+                            <h5 class="mb-3">Pattern #1</h5>
+                            
+                            <div class="mb-3">
+                                <label for="difficulty0" class="form-label">Difficulty Level</label>
+                                <input type="number" class="form-control" id="difficulty0" name="difficulty" min="1" max="100" placeholder="Enter a value from 1-100" required>
+                                <div class="form-text">Higher values create more complex patterns</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="char_set0" class="form-label">Character Set</label>
+                                <input type="text" class="form-control" id="char_set0" name="char_set" placeholder="e.g., 0123456789 or ABCDEF" required>
+                                <div class="form-text">For numeric patterns, use digits only. For text patterns, use any characters.</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mb-4">
+                        <button type="button" class="btn btn-outline-secondary" id="add-pattern">
+                            <i class="bi bi-plus-circle"></i> Add Another Pattern
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-file-earmark-pdf"></i> Generate PDF
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">How It Works</h5>
+            </div>
+            <div class="card-body">
+                <p>The Pattern Generator creates customized patterns based on your specifications:</p>
+                <ul>
+                    <li><strong>Difficulty Level:</strong> Controls the complexity and length of the generated pattern.</li>
+                    <li><strong>Character Set:</strong> Defines which characters are used in the pattern.</li>
+                    <li><strong>Multiple Patterns:</strong> Add additional patterns to generate more varied outputs in a single PDF.</li>
+                </ul>
+                <p class="mb-0">The generated PDF will contain your patterns arranged in a visually appealing layout.</p>
+            </div>
+        </div>
+        
+        <footer class="text-center text-muted py-4">
+            <p>
+                <a href="https://github.com/thegoodduck/Pattern_Generator" class="text-decoration-none">
+                    Pattern Generator
+                </a> | Made with <span class="text-danger">♥</span> by @thegoodduck
+            </p>
+        </footer>
     </div>
     
     <script>
@@ -34,22 +115,39 @@
             const patternFields = document.getElementById("pattern-fields");
             // Create a new group container
             const newGroup = document.createElement("div");
-            newGroup.className = "pattern-group border rounded p-3 mb-3";
+            newGroup.className = "pattern-group border rounded p-4 mb-4";
             newGroup.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Pattern #${patternCount+1}</h5>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-pattern" data-pattern-id="${patternCount}">
+                        Remove
+                    </button>
+                </div>
                 <div class="mb-3">
-                    <label for="difficulty${patternCount}" class="form-label">Difficulty</label>
-                    <input type="number" class="form-control" id="difficulty${patternCount}" name="difficulty" required>
+                    <label for="difficulty${patternCount}" class="form-label">Difficulty Level</label>
+                    <input type="number" class="form-control" id="difficulty${patternCount}" name="difficulty" min="1" max="100" placeholder="Enter a value from 1-100" required>
+                    <div class="form-text">Higher values create more complex patterns</div>
                 </div>
                 <div class="mb-3">
                     <label for="char_set${patternCount}" class="form-label">Character Set</label>
-                    <input type="text" class="form-control" id="char_set${patternCount}" name="char_set" required>
+                    <input type="text" class="form-control" id="char_set${patternCount}" name="char_set" placeholder="e.g., 0123456789 or ABCDEF" required>
+                    <div class="form-text">For numeric patterns, use digits only. For text patterns, use any characters.</div>
                 </div>
             `;
             patternFields.appendChild(newGroup);
+            
+            // Add event listener for the remove button
+            const removeButton = newGroup.querySelector(".remove-pattern");
+            removeButton.addEventListener("click", function() {
+                patternFields.removeChild(newGroup);
+            });
+            
             patternCount++;
         });
     </script>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
 </body>
 </html>
