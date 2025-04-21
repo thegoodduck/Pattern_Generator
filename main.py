@@ -5,14 +5,13 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 # Removed unused import
 app = flask.Flask(__name__)
-pattern = []
-def generate_pattern(difficulty,char_set):
+
+# --- Pattern Generation Functions ---
+def generate_pattern(difficulty, char_set):
     char_sequence = ''.join(random.choice(char_set) for _ in range(difficulty))
     pattern = []
     for i in range(difficulty):
-            # generating pattern(not random) based on the char_set provided by the user.
-            # We will use difficulty as the length of each iteration of the pattern. The pattern will be a list of strings.
-            pattern.append(char_sequence)
+        pattern.append(char_sequence)
     return pattern
 
 def generate_pattern_num(difficulty, char_set="0123456789"):
@@ -21,203 +20,355 @@ def generate_pattern_num(difficulty, char_set="0123456789"):
         print("Option 0")
         seq = ''.join(random.choice(char_set) for i in range(difficulty))
         pattern = []
-        for i in range(difficulty):
-            # generating pattern (not random) based on the char_set provided by the user.
-            pattern.append(seq)
+        for _ in range(difficulty):
+            pattern.append(sequence)
         return ''.join(pattern)
     if options == 1:
         sequence = [random.choice(char_set) for _ in range(difficulty)]
-        # Randomly select a rule and a number
-        rule = random.choice(["*", "/", "+", "-"])
-        rule_num = random.randint(2, 9) if rule in ["*", "/"] else random.randint(1, 9)  # Avoid no-op operations
+        operation = random.choice(["*", "/", "+", "-"])
+        factor = random.randint(2, 9) if operation in ["*", "/"] else random.randint(1, 9)
+        target_position = random.randint(0, len(sequence) - 1)
         
-        # Randomly select a digit index to apply the rule
-        digit_selected = random.randint(0, len(sequence) - 1)
+        result = ""
+        initial_sequence = ''.join(sequence)
         
-        full_output = ""  # Initialize full_output to store the full concatenated output
-
-        print(f"Option 1")
-        print(f"Initial Sequence: {''.join(sequence)}")
-        print(f"Rule: {rule}, Rule Number: {rule_num}, Digit Selected Index: {digit_selected}\n")
-
-        # Apply the rule iteratively for the number of times equal to difficulty
-        for i in range(1, difficulty + 1):
-            original_value = int(sequence[digit_selected])
-
-            if rule == "*":
-                new_value = original_value * rule_num
-            elif rule == "/":
-                new_value = original_value // rule_num if rule_num != 0 else original_value
-            elif rule == "+":
-                new_value = original_value + rule_num
-            elif rule == "-":
-                new_value = (original_value - rule_num) % 10
-
-            # Update the selected digit in the sequence (keep only last digit if multi-digit)
-            sequence[digit_selected] = str(new_value)[-1]
+        for iteration in range(1, difficulty + 1):
+            original_value = int(sequence[target_position])
             
-            iteration_output = ''.join(sequence)
-            full_output += iteration_output
+            # Apply the selected operation to the target digit
+            if operation == "*":
+                new_value = original_value * factor
+            elif operation == "/":
+                new_value = original_value // factor if factor != 0 else original_value
+            elif operation == "+":
+                new_value = original_value + factor
+            elif operation == "-":
+                new_value = (original_value - factor) % 10
+                
+            # Update the sequence with the new value (last digit only)
+            sequence[target_position] = str(new_value)[-1]
+            current_sequence = ''.join(sequence)
+            result += current_sequence
             
-            print(f"Iteration {i}: {iteration_output}")
-            print(f"Full Output So Far: {full_output}\n")
-
-        print("Final Full Output:")
-        print(full_output)
-
-        return full_output
-    if options == 2:
-        print("Option 2")
-        rule = random.choice(["*", "/", "+", "-"])
-        rule_num = random.randint(2, 9) if rule in ["*", "/"] else random.randint(1, 9)  # Avoid no-op operations
-        sequence = list(''.join(random.choice(char_set) for i in range(difficulty)))
-        full_output = ""
-        for i in range(1, difficulty + 1):
-            # Apply the rule to every digit in the sequence
+        return result
+        
+    else:  # algorithm == 2
+        # Algorithm 2: Apply operation to every digit in each iteration
+        sequence = list(''.join(random.choice(char_set) for _ in range(difficulty)))
+        operation = random.choice(["*", "/", "+", "-"])
+        factor = random.randint(2, 9) if operation in ["*", "/"] else random.randint(1, 9)
+        
+        result = ""
+        
+        for _ in range(1, difficulty + 1):
+            # Apply operation to each digit
             for j in range(len(sequence)):
                 original_value = int(sequence[j])
                 
-                if rule == "*":
-                    new_value = original_value * rule_num
-                elif rule == "/":
-                    new_value = original_value // rule_num if rule_num != 0 else original_value
-                elif rule == "+":
-                    new_value = original_value + rule_num
-                elif rule == "-":
-                    new_value = (original_value - rule_num) % 10  # wrap around for digits 0-9
-                
-                # Keep only the last digit in case of multi-digit results
+                if operation == "*":
+                    new_value = original_value * factor
+                elif operation == "/":
+                    new_value = original_value // factor if factor != 0 else original_value
+                elif operation == "+":
+                    new_value = original_value + factor
+                elif operation == "-":
+                    new_value = (original_value - factor) % 10
+                    
                 sequence[j] = str(new_value)[-1]
+                
+            current_sequence = ''.join(sequence)
+            result += current_sequence
             
-            iteration_output = ''.join(sequence)
-            full_output += iteration_output
-            print(f"Iteration {i}: {iteration_output}")
-            print(f"Full Output So Far: {full_output}\n")
+        return result
+
+# --- PDF Generation Functions ---
+def generate_pdf_weasyprint(final_pattern_lines):
+    """
+    Generate a PDF document with the provided pattern lines using WeasyPrint.
+    
+    Args:
+        final_pattern_lines (list): List of pattern strings to include in the PDF
         
-        print("Final Full Output:")
-        print(full_output)
-        return full_output
+    Returns:
+        BytesIO: A buffer containing the generated PDF
+    """
+    # Page settings (letter size)
+    PAGE_WIDTH, PAGE_HEIGHT = 612, 792
+    margin = 40
+    line_height = 20
+    placed_boxes = []  # Track absolute positions to avoid overlapping
 
-# Generate pdf with different patterns
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    if flask.request.method == 'POST':
-        # Check for batch generation: if multiple difficulties and char_sets are provided,
-        # assume form fields "difficulty" and "char_set" are lists.
-        if flask.request.form.getlist('difficulty') and len(flask.request.form.getlist('difficulty')) > 1:
-            difficulties = flask.request.form.getlist('difficulty')
-            char_sets = flask.request.form.getlist('char_set')
-            pattern_list = []
-            # Process each difficulty and char_set pair
-            for diff, cs in zip(difficulties, char_sets):
-                diff_int = int(diff)
-                if cs.isdigit():
-                    p = generate_pattern_num(diff_int, cs)
-                else:
-                    p = generate_pattern(diff_int, cs)
-                # Ensure a one-liner: join list elements without separators
-                if isinstance(p, list):
-                    p = "".join(p)
-                pattern_list.append(p)
-            # One pattern per line
-            final_pattern_lines = pattern_list
-        else:
-            difficulty = int(flask.request.form['difficulty'])
-            char_set = flask.request.form['char_set']
-            if char_set.isdigit():
-                pattern = generate_pattern_num(difficulty, char_set)
-            else:
-                pattern = generate_pattern(difficulty, char_set)
-            if isinstance(pattern, list):
-                pattern = "".join(pattern)
-            final_pattern_lines = [pattern]
+    # Start building the HTML string with styles
+    html_lines = [f"""
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {{
+            position: relative;
+            width: {PAGE_WIDTH}px;
+            height: {PAGE_HEIGHT}px;
+            margin: 0;
+            padding: 0;
+            background: white;
+            font: 14px Helvetica, Arial, sans-serif;
+        }}
+        .title {{
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            text-align: center;
+            font-weight: bold;
+            font-size: 24px;
+            color: black;
+        }}
+        .link {{
+            position: absolute;
+            bottom: 60px;
+            width: 100%;
+            text-align: center;
+            font-style: italic;
+            font-size: 12px;
+            color: blue;
+        }}
+        .signature {{
+            position: absolute;
+            bottom: 30px;
+            right: {margin}px;
+            color: black;
+        }}
+        .line {{
+            position: absolute;
+            white-space: nowrap;
+        }}
+    </style>
+</head>
+<body>
+    <div class="title">Pattern Generator</div>
+    <div class="link"><a href="https://github.com/thegoodduck/Pattern_Generator">https://github.com/thegoodduck/Pattern_Generator</a></div>
+    <div class="signature">Made with love by @thegoodduck</div>
+"""]
 
-        # Generate PDF with custom styling
-        pdf_buffer = io.BytesIO()
-        c = canvas.Canvas(pdf_buffer, pagesize=letter)
-        width, height = letter
+    # Rainbow colors (in hex)
+    rainbow_colors = ["#FF0000", "#FF7F00", "#FFFF00", "#00FF00", "#0000FF", "#4B0082", "#9400D3"]
 
-        # Title, Link and Signature Settings
-        title = "Pattern Generator"
-        link_text = "https://github.com/thegoodduck/Pattern_Generator"
-        signature = "Made with love by @thegoodduck"
+    # Place each pattern line on the page
+    for idx, line in enumerate(final_pattern_lines):
+        # Approximate text width
+        text_width = len(line) * 8  
+        placed = False
+        attempts = 0
+        max_attempts = 100
 
-        # Draw Title at top center (fixed position)
-        c.setFont("Helvetica-Bold", 24)
-        c.setFillColorRGB(0, 0, 0)
-        c.drawCentredString(width / 2, height - 50, title)
+        # Try to place text without overlapping other elements
+        while not placed and attempts < max_attempts:
+            # Generate random position
+            random_x = random.uniform(margin, PAGE_WIDTH - margin - text_width)
+            random_y = random.uniform(margin + 50, PAGE_HEIGHT - margin - line_height - 60)
+            new_box = (random_x, random_y, random_x + text_width, random_y + line_height)
+            
+            # Check for overlap with existing elements
+            overlap = any(
+                not (new_box[2] < box[0] or new_box[0] > box[2] or
+                     new_box[3] < box[1] or new_box[1] > box[3])
+                for box in placed_boxes
+            )
+            
+            if not overlap:
+                placed_boxes.append(new_box)
+                color = random.choice(rainbow_colors)
+                html_lines.append(f"""<div class="line" style="left:{random_x}px; top:{random_y}px; color:{color};">{line}</div>""")
+                placed = True
+            attempts += 1
 
-        # Rainbow color palette (as RGB tuples normalized between 0 and 1)
-        rainbow_colors = [
-            (1, 0, 0),       # Red
-            (1, 0.5, 0),     # Orange
-            (1, 1, 0),       # Yellow
-            (0, 1, 0),       # Green
-            (0, 0, 1),       # Blue
-            (0.29, 0, 0.51), # Indigo
-            (0.93, 0.51, 0.93)  # Violet
-        ]
-
-        # Draw each pattern string at a separate random non-overlapping position
-        c.setFont("Helvetica", 14)
-        line_height = 20  # approximate height for text
-        margin = 40
-        placed_boxes = []  # To store bounding boxes for drawn texts
-
-        for idx, line in enumerate(final_pattern_lines):
-            text_width = c.stringWidth(line, "Helvetica", 14)
+        # Fallback positioning if random placement fails
+        if not placed:
+            fallback_y = PAGE_HEIGHT - margin - idx * line_height - 60
             color = random.choice(rainbow_colors)
-            placed = False
-            attempts = 0
+            html_lines.append(f"""<div class="line" style="left:{margin}px; top:{fallback_y}px; color:{color};">{line}</div>""")
+    
+    # Finalize HTML and generate PDF
+    html_lines.append("</body></html>")
+    html_str = "\n".join(html_lines)
+    pdf_bytes = HTML(string=html_str).write_pdf()
+    return io.BytesIO(pdf_bytes)
 
-            # Try up to 100 times to find a non-overlapping random position
-            while not placed and attempts < 100:
-                random_x = random.uniform(margin, width - margin - text_width)
-                random_y = random.uniform(margin, height - margin - line_height)
-                new_box = (random_x, random_y, random_x + text_width, random_y + line_height)
+def generate_pdf_reportlab(final_pattern_lines):
+    """
+    Generate a PDF document with the provided pattern lines using ReportLab.
+    
+    Args:
+        final_pattern_lines (list): List of pattern strings to include in the PDF
+        
+    Returns:
+        BytesIO: A buffer containing the generated PDF
+    """
+    pdf_buffer = io.BytesIO()
+    c = canvas.Canvas(pdf_buffer, pagesize=letter)
+    width, height = letter
+    margin = 40
+    line_height = 20
 
-                # Check overlap with all previously placed boxes
-                overlap = any(
-                    not (new_box[2] < box[0] or new_box[0] > box[2] or
-                         new_box[3] < box[1] or new_box[1] > box[3])
-                    for box in placed_boxes
-                )
+    # Document metadata
+    title = "Pattern Generator"
+    link_text = "https://github.com/thegoodduck/Pattern_Generator"
+    signature = "Made with love by @thegoodduck"
 
-                if not overlap:
-                    placed_boxes.append(new_box)
-                    c.setFillColorRGB(*color)
-                    c.drawString(random_x, random_y, line)
-                    placed = True
-                attempts += 1
+    # Add document title
+    c.setFillColorRGB(0, 0, 0)
+    c.setFont("Helvetica-Bold", 24)
+    c.drawCentredString(width / 2, height - 50, title)
 
-            # Fallback: if unable to fit without overlapping after 100 attempts
-            if not placed:
-                fallback_y = height - margin - idx * line_height
+    # Rainbow colors (in RGB format)
+    rainbow_colors = [
+        (1, 0, 0),      # Red
+        (1, 0.5, 0),    # Orange
+        (1, 1, 0),      # Yellow
+        (0, 1, 0),      # Green
+        (0, 0, 1),      # Blue
+        (0.29, 0, 0.51), # Indigo
+        (0.93, 0.51, 0.93) # Violet
+    ]
+
+    # Place pattern lines on the page
+    placed_boxes = []
+    c.setFont("Helvetica", 14)
+    for idx, line in enumerate(final_pattern_lines):
+        text_width = c.stringWidth(line, "Helvetica", 14)
+        color = random.choice(rainbow_colors)
+        placed = False
+        attempts = 0
+        max_attempts = 100
+
+        # Try to place text without overlapping other elements
+        while not placed and attempts < max_attempts:
+            # Generate random position
+            random_x = random.uniform(margin, width - margin - text_width)
+            random_y = random.uniform(margin + 50, height - margin - line_height - 60)
+            new_box = (random_x, random_y, random_x + text_width, random_y + line_height)
+            
+            # Check for overlap with existing elements
+            overlap = any(
+                not (new_box[2] < box[0] or new_box[0] > box[2] or 
+                     new_box[3] < box[1] or new_box[1] > box[3])
+                for box in placed_boxes
+            )
+            
+            if not overlap:
+                placed_boxes.append(new_box)
                 c.setFillColorRGB(*color)
-                c.drawString(margin, fallback_y, line)
+                c.drawString(random_x, random_y, line)
+                placed = True
+            attempts += 1
+            
+        # Fallback positioning if random placement fails
+        if not placed:
+            fallback_y = height - margin - idx * line_height - 60
+            c.setFillColorRGB(*color)
+            c.drawString(margin, fallback_y, line)
 
-        # Add the clickable link (centered above the signature)
-        c.setFont("Helvetica-Oblique", 12)
-        c.setFillColorRGB(0, 0, 1)  # Blue for the link
-        c.drawCentredString(width / 2, 50, link_text)
-        link_width = 200
-        c.linkURL(link_text,
+    # Add link and signature
+    c.setFont("Helvetica-Oblique", 12)
+    c.setFillColorRGB(0, 0, 1)
+    c.drawCentredString(width / 2, 50, link_text)
+    link_width = 200
+    c.linkURL(link_text,
               (width / 2 - link_width / 2, 40, width / 2 + link_width / 2, 60),
               relative=0)
+    c.setFillColorRGB(0, 0, 0)
+    c.drawRightString(width - margin, 30, signature)
+    
+    # Finalize the PDF
+    c.showPage()
+    c.save()
+    pdf_buffer.seek(0)
+    return pdf_buffer
 
-        # Add signature at the bottom-right
-        c.setFillColorRGB(0, 0, 0)
-        c.drawRightString(width - margin, 30, signature)
-
-        c.showPage()
-        c.save()
-        pdf_buffer.seek(0)
-
-        return flask.send_file(
-            pdf_buffer,
-            as_attachment=True,
-            download_name='pattern.pdf',
-            mimetype='application/pdf'
-        )
+# --- Flask Routes ---
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    """
+    Main route handler for the Pattern Generator web application.
+    
+    GET: Displays the pattern generation form
+    POST: Processes form submission and returns a generated PDF
+    
+    Returns:
+        Response: HTML template or PDF file download
+    """
+    if flask.request.method == 'POST':
+        try:
+            # Process batch or single pattern generation
+            if flask.request.form.getlist('difficulty') and len(flask.request.form.getlist('difficulty')) > 1:
+                # Batch pattern generation
+                difficulties = flask.request.form.getlist('difficulty')
+                char_sets = flask.request.form.getlist('char_set')
+                pattern_list = []
+                
+                # Generate each requested pattern
+                for diff, char_set in zip(difficulties, char_sets):
+                    difficulty = int(diff)
+                    # Choose appropriate generator based on character set
+                    if char_set.isdigit():
+                        pattern = generate_pattern_num(difficulty, char_set)
+                    else:
+                        pattern = generate_pattern(difficulty, char_set)
+                    
+                    # Convert list patterns to strings if needed
+                    if isinstance(pattern, list):
+                        pattern = "".join(pattern)
+                    pattern_list.append(pattern)
+                    
+                final_pattern_lines = pattern_list
+            else:
+                # Single pattern generation
+                try:
+                    difficulty = int(flask.request.form['difficulty'])
+                    char_set = flask.request.form['char_set']
+                    
+                    # Choose appropriate generator based on character set
+                    if char_set.isdigit():
+                        pattern = generate_pattern_num(difficulty, char_set)
+                    else:
+                        pattern = generate_pattern(difficulty, char_set)
+                        
+                    # Convert list patterns to strings if needed
+                    if isinstance(pattern, list):
+                        pattern = "".join(pattern)
+                    final_pattern_lines = [pattern]
+                except ValueError:
+                    # Handle invalid difficulty value
+                    return flask.render_template('index.html', 
+                                               error="Please enter a valid number for difficulty.")
+                except KeyError:
+                    # Handle missing form fields
+                    return flask.render_template('index.html', 
+                                               error="Please fill in all required fields.")
+            
+            # Generate PDF using selected backend
+            if USE_WEASYPRINT:
+                pdf_buffer = generate_pdf_weasyprint(final_pattern_lines)
+            else:
+                pdf_buffer = generate_pdf_reportlab(final_pattern_lines)
+                
+            # Return PDF file for download
+            return flask.send_file(
+                pdf_buffer,
+                as_attachment=True,
+                download_name='pattern.pdf',
+                mimetype='application/pdf'
+            )
+            
+        except Exception as e:
+            # Log exception and return error page
+            app.logger.error(f"Error generating pattern: {str(e)}")
+            return flask.render_template('index.html', 
+                                       error="An error occurred while generating the pattern.")
+    
+    # Display pattern generation form
     return flask.render_template('index.html')
-app.run(debug=True)
+
+
+if __name__ == '__main__':
+    # Run the Flask application in debug mode (disable in production)
+    app.run(debug=True)
